@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDECE4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="通勤穿衣">
+<meta name="format-detection" content="telephone=no">
+<title>通勤穿衣助手 · 按天气决定今天穿什么</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%232B4568'/%3E%3Cpath d='M17 12 L9 17 L12 30 L15 29 L15 38 L33 38 L33 29 L36 30 L39 17 L31 12' fill='none' stroke='%23EDECE4' stroke-width='2.2' stroke-linejoin='round'/%3E%3Cpath d='M17 12 L24 17 L31 12' fill='none' stroke='%23EDECE4' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+:root{
+  --paper:#EDECE4;
+  --paper-deep:#E4E3DA;
+  --ink:#17233A;
+  --ink-2:#3C4759;
+  --ink-3:#6C7382;
+  --hair:#D3D1C4;
+  --hair-soft:#DFDDD1;
+  --denim:#2B4568;
+  --denim-deep:#1B2D47;
+  --warn:#A8442A;
+  --good:#4A6A50;
+  --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono","Courier New",monospace;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--paper);
+  background-image:
+    repeating-linear-gradient(115deg, rgba(23,35,58,.028) 0 1px, transparent 1px 4px),
+    radial-gradient(120% 80% at 50% -10%, #F3F2EB 0%, var(--paper) 55%);
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  overflow-x:hidden;
+  line-height:1.6;
+  min-height:100vh;
+}
+.page{max-width:1080px;margin:0 auto;padding:28px 32px 56px;padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+
+/* ---------- 顶栏 ---------- */
+.bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--hair)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.04em;font-size:15px;color:var(--denim-deep)}
+.brand svg{width:20px;height:20px;opacity:.9}
+.bar-spacer{flex:1}
+.city-btn{
+  display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-size:14px;
+  color:var(--denim-deep);background:none;border:none;border-bottom:1px solid transparent;
+  padding:2px 0;cursor:pointer;font-weight:500;
+}
+.city-btn:hover{border-bottom-color:var(--denim)}
+.city-btn svg{width:11px;height:11px;opacity:.55}
+.today{font-size:13px;color:var(--ink-3);letter-spacing:.02em;padding-left:14px;border-left:1px solid var(--hair)}
+@media(max-width:720px){.today{padding-left:0;border-left:none}}
+.meta{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-3)}
+.meta .upd{font-variant-numeric:tabular-nums}
+.ghost{
+  font-family:var(--sans);font-size:12.5px;color:var(--ink-2);background:none;
+  border:1px solid var(--hair);padding:3px 10px;cursor:pointer;transition:background .15s,border-color .15s;
+}
+.ghost:hover{background:#E6E5DC;border-color:#C7C5B7}
+.ghost:disabled{opacity:.5;cursor:default}
+
+/* ---------- 城市选择 ---------- */
+.city-panel{border-bottom:1px solid var(--hair);padding:16px 0 20px;display:none}
+.city-panel[data-open="1"]{display:block}
+.city-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.city-search{
+  flex:1;min-width:180px;font-family:var(--sans);font-size:13.5px;color:var(--ink);
+  background:transparent;border:none;border-bottom:1px solid var(--hair);padding:6px 2px;outline:none;
+}
+.city-search:focus{border-bottom-color:var(--denim)}
+.city-search::placeholder{color:#9AA0AB}
+.mode-chip{
+  font-family:var(--sans);font-size:12.5px;color:var(--denim-deep);background:transparent;
+  border:1px solid var(--hair);padding:4px 10px;cursor:pointer;
+}
+.mode-chip:hover{background:#E6E5DC}
+.city-list{display:flex;flex-wrap:wrap;gap:6px 8px}
+.city-item{
+  font-family:var(--sans);font-size:13px;color:var(--ink-2);background:transparent;
+  border:1px solid var(--hair-soft);padding:4px 11px;cursor:pointer;transition:.15s;
+}
+.city-item:hover{color:var(--denim-deep);border-color:var(--denim)}
+.city-item[data-active="1"]{background:var(--denim);color:#F2F1E9;border-color:var(--denim)}
+.city-hint{font-size:12px;color:var(--ink-3);margin-top:10px}
+
+/* ---------- Hero ---------- */
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;padding:30px 0 14px;border-bottom:1px solid var(--hair)}
+.hero>div{min-width:0}
+@media(max-width:860px){.hero{grid-template-columns:1fr;gap:18px;padding:22px 0 12px}}
+.temp-line{display:flex;align-items:flex-start;gap:14px}
+.temp{
+  font-family:var(--mono);font-size:74px;line-height:1;font-weight:400;letter-spacing:-.03em;
+  color:var(--denim-deep);font-variant-numeric:tabular-nums;
+}
+@media(max-width:860px){.temp{font-size:60px}}
+.temp .deg{font-size:26px;vertical-align:top;margin-left:2px;color:var(--ink-2);line-height:1}
+.temp-side{padding-top:8px}
+.wx-name{font-size:16px;font-weight:500;color:var(--ink);letter-spacing:.02em}
+.wx-note{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;font-size:12.5px;color:var(--ink-3)}
+.facts b{font-family:var(--mono);font-weight:500;color:var(--ink);font-size:13.5px;margin-left:3px}
+.facts .f-k{letter-spacing:.03em}
+.facts .f-at{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:4px;font-variant-numeric:tabular-nums}
+.tm-meta i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:4px}
+
+.ctl-group{margin-bottom:18px}
+.ctl-label{font-size:11.5px;letter-spacing:.14em;color:var(--ink-3);margin-bottom:7px}
+.time-row{display:flex;gap:10px;flex-wrap:wrap}
+.time-cell{display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--hair);padding:5px 0;flex:1;min-width:132px}
+.time-cell span{font-size:12.5px;color:var(--ink-3);flex:none;white-space:nowrap}
+.time-cell input{
+  font-family:var(--mono);font-size:13px;color:var(--ink);background:transparent;border:none;
+  outline:none;width:0;flex:1;min-width:0;padding:0;
+}
+.time-cell input:focus{color:var(--denim)}
+.mode-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--hair)}
+.mode-row button{
+  font-family:var(--sans);font-size:13px;color:var(--ink-3);background:none;border:none;
+  border-bottom:2px solid transparent;padding:8px 2px;cursor:pointer;transition:.15s;
+}
+.mode-row button:hover{color:var(--ink)}
+.mode-row button[data-on="1"]{color:var(--denim-deep);border-bottom-color:var(--denim);font-weight:500}
+.dur-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--ink-3)}
+.dur-row input{
+  font-family:var(--mono);font-size:13px;color:var(--ink);background:transparent;border:none;
+  border-bottom:1px solid var(--hair);width:42px;text-align:center;padding:2px 0;outline:none;
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield;
+}
+.dur-row input:focus{border-bottom-color:var(--denim)}
+.dur-row input::-webkit-outer-spin-button,.dur-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.dur-row .arr{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;margin-left:14px}
+
+/* ---------- 穿法 ---------- */
+.wear{padding:26px 0 8px;border-bottom:1px solid var(--hair)}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.sec-head h2{font-size:19px;font-weight:700;letter-spacing:.02em;color:var(--denim-deep)}
+.sec-head p{font-size:13px;color:var(--ink-3)}
+.headline{font-size:15.5px;line-height:1.75;color:var(--ink);max-width:62ch;margin:8px 0 24px;font-weight:400}
+.headline em{font-style:normal;color:var(--denim-deep);font-weight:500}
+
+.layers{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--hair)}
+@media(max-width:860px){.layers{grid-template-columns:1fr}}
+.layer{padding:18px 22px 22px 0;border-right:1px solid var(--hair-soft)}
+.layer:last-child{border-right:none}
+@media(max-width:860px){.layer{border-right:none;border-bottom:1px solid var(--hair-soft);padding:16px 0 18px}}
+.layer-top{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.layer-ico{width:32px;height:32px;color:var(--denim);flex:none}
+.layer-tag{font-size:12px;letter-spacing:.1em;color:var(--ink-3)}
+.layer-txt{font-size:14.5px;line-height:1.8;color:var(--ink);margin-left:41px;max-width:22ch}
+.layer-txt.muted{color:var(--ink-3)}
+
+.extras{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--hair);margin-top:0}
+@media(max-width:860px){.extras{grid-template-columns:1fr}}
+.extra{padding:16px 22px 16px 0;border-right:1px solid var(--hair-soft)}
+.extra:last-child{border-right:none}
+@media(max-width:860px){.extra{border-right:none;border-bottom:1px solid var(--hair-soft);padding:14px 0}}
+.extra .k{font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);margin-bottom:4px}
+.extra .v{font-size:14px;color:var(--ink);line-height:1.7}
+
+.commute-note{display:grid;grid-template-columns:repeat(2,1fr);gap:0;margin-top:22px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+@media(max-width:860px){.commute-note{grid-template-columns:1fr}}
+.cn-cell{padding:14px 22px 16px 0;border-right:1px solid var(--hair-soft)}
+.cn-cell:last-child{border-right:none}
+@media(max-width:860px){.cn-cell{border-right:none;border-bottom:1px solid var(--hair-soft);padding:12px 0}}
+.cn-k{font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.cn-k b{font-family:var(--mono);font-size:14px;color:var(--denim-deep);font-weight:500}
+.cn-v{font-size:13.5px;color:var(--ink-2);line-height:1.75}
+
+/* ---------- 明天 ---------- */
+.tomorrow{padding:26px 0 12px;border-bottom:1px solid var(--hair)}
+.tm-meta{display:flex;flex-wrap:wrap;gap:3px 20px;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.tm-meta b{font-family:var(--mono);font-weight:500;color:var(--ink);font-size:13px;margin-left:4px;font-variant-numeric:tabular-nums}
+.tm-sub{font-size:12px;color:var(--ink-3);margin-top:8px}
+.tm-sub b{font-family:var(--mono);font-weight:500;color:var(--ink-2);font-size:12.5px;margin-left:4px;font-variant-numeric:tabular-nums}
+.tm-sub .g{display:inline-block;width:18px}
+.tm-head{font-size:15px;line-height:1.75;color:var(--ink);max-width:62ch;margin:8px 0 0;font-weight:400}
+.tm-head em{font-style:normal;color:var(--denim-deep);font-weight:500}
+.tm-grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--hair);margin-top:16px}
+@media(max-width:860px){.tm-grid{grid-template-columns:1fr 1fr}}
+.tm-cell{padding:13px 20px 15px 0;border-right:1px solid var(--hair-soft)}
+.tm-cell:nth-child(3n){border-right:none}
+@media(max-width:860px){.tm-cell:nth-child(3n){border-right:1px solid var(--hair-soft)}.tm-cell:nth-child(2n){border-right:none}}
+.tm-cell .k{font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);margin-bottom:4px}
+.tm-cell .v{font-size:13.5px;color:var(--ink);line-height:1.7}
+
+/* ---------- 图表 ---------- */
+.chart-sec{padding:32px 0 18px;border-bottom:1px solid var(--hair)}
+.chart-wrap{position:relative;width:100%;height:248px;margin-top:6px}
+@media(max-width:860px){.chart-wrap{height:224px}}
+#chart{width:100%;height:100%}
+.chart-cap{font-size:12px;color:var(--ink-3);margin-top:8px}
+.chart-fallback{width:100%;height:100%;display:block}
+.ctip{position:absolute;top:0;left:0;transform:translateX(-50%);background:#17233A;color:#EFEEE6;font-size:11.5px;line-height:1.65;padding:5px 9px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:2;font-variant-numeric:tabular-nums}
+.ctip[data-on="1"]{opacity:1}
+.ctip b{font-family:var(--mono);font-weight:500;color:#F3F2EA;margin-right:4px}
+#chart{touch-action:pan-y}
+
+/* ---------- 依据 ---------- */
+.basis{padding:30px 0 10px}
+.rows{margin-top:16px;border-top:1px solid var(--hair)}
+.row{display:grid;grid-template-columns:96px 1fr 88px;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--hair-soft)}
+.row .m{min-width:0}
+.row .note{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.5}
+@media(max-width:640px){.row{grid-template-columns:1fr auto;row-gap:6px}.row .m{grid-column:1/-1;grid-row:2}}
+.row .k{font-size:12.5px;color:var(--ink-2);letter-spacing:.02em}
+.row .meter{height:3px;background:#E1DFD3;position:relative;overflow:hidden}
+.row .fill{position:absolute;left:0;top:0;bottom:0;background:var(--denim);width:0}
+.row .fill.warn{background:var(--warn)}
+.row .val{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- 状态与页脚 ---------- */
+.status{
+  border-left:2px solid var(--warn);background:#E9E4D8;padding:12px 16px;font-size:13px;
+  color:var(--ink-2);line-height:1.7;margin:18px 0 0;display:none;
+}
+.status[data-on="1"]{display:block}
+.status b{color:var(--warn);font-weight:500}
+.status button{
+  font-family:var(--sans);font-size:12.5px;margin-left:10px;border:1px solid #C9C3B2;background:transparent;
+  padding:2px 9px;cursor:pointer;color:var(--ink-2);
+}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--hair);font-size:11.5px;color:var(--ink-3);line-height:1.9;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+footer a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--hair)}
+.skel{color:#A7ADB6;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:.95}}
+.wear[data-ready="0"],.chart-sec[data-ready="0"],.basis[data-ready="0"]{display:none}
+.cn-cell.full{grid-column:1/-1;border-right:none;border-top:1px solid var(--hair-soft)}
+.cn-cell.full .cn-v{color:var(--ink-2)}
+
+/* ---------- 手机端（iPhone Safari 优先） ---------- */
+@media(max-width:720px){
+  .page{padding:18px 16px 40px;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .bar{gap:8px 12px;padding-bottom:12px}
+  .brand{font-size:14px;gap:7px}
+  .brand svg{width:18px;height:18px}
+  .today{order:3;flex-basis:100%;font-size:12px;margin-top:-2px}
+  .city-btn{font-size:15px;min-height:40px;padding:6px 0}
+  .meta{font-size:12px;gap:8px}
+  .ghost{min-height:34px;padding:7px 12px;font-size:12.5px}
+
+  .city-search{font-size:16px;padding:8px 2px}
+  .city-item{font-size:13.5px;padding:9px 13px;min-height:40px}
+  .mode-chip{min-height:38px;padding:8px 12px;font-size:13px}
+
+  .temp{font-size:58px}
+  .temp .deg{font-size:22px}
+  .wx-name{font-size:15px}
+  .facts{gap:6px 16px;font-size:12px;margin-top:14px}
+  .facts b{font-size:13px}
+
+  .ctl-label{font-size:11px;letter-spacing:.1em}
+  .time-cell{min-height:44px;padding:8px 0;min-width:120px}
+  .time-cell input{font-size:16px}
+  .mode-row button{font-size:13px;padding:12px 2px;min-height:44px}
+
+  .dur-row{margin-top:4px;font-size:12.5px}
+  .dur-row input{font-size:16px;width:52px;padding:4px 0}
+  .tm-head{font-size:14.5px;line-height:1.78}
+  .tm-cell .v{font-size:13px}
+  .wear{padding:26px 0 4px}
+  .sec-head h2{font-size:17px}
+  .sec-head p{font-size:12.5px}
+  .headline{font-size:15px;line-height:1.78;margin:6px 0 18px}
+  .layer{padding:15px 0 16px}
+  .layer-txt{font-size:14px;margin-left:40px;max-width:none}
+  .extra{padding:13px 0}
+  .extra .v{font-size:13.5px}
+  .cn-cell{padding:12px 0 13px}
+  footer{flex-direction:column;gap:10px;margin-top:32px;font-size:11px}
+  .foot-right{text-align:left}
+}
+
+/* iPhone 竖屏更窄时再收一档 */
+@media(max-width:430px){
+  .temp{font-size:52px}
+  .facts{gap:5px 12px;font-size:11.5px}
+  .facts b{font-size:12.5px}
+  .headline{font-size:14.5px;line-height:1.75}
+  .sec-head h2{font-size:16.5px}
+  .sec-head p{font-size:12px}
+  .layer-txt{font-size:13.5px;margin-left:38px}
+  .cn-k b{font-size:13px}
+  .row{grid-template-columns:1fr auto}
+  .chart-wrap{height:210px}
+}
+
+@media(prefers-reduced-motion:reduce){.skel{animation:none}}
+p,div,h2,span{text-wrap:pretty}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== 顶栏 ===== -->
+  <header class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 6.4a1.9 1.9 0 1 0-1-3.3"/><path d="M12 6.4c-.6.3-1.2.8-1.9 1.4L4 12.6l2.2 3.4 2.3-1.6V21h7v-6.6l2.3 1.6L20 12.6l-6.1-4.8c-.7-.6-1.3-1.1-1.9-1.4z"/>
+      </svg>
+      <span>通勤穿衣</span>
+    </div>
+    <span class="today" id="todayLabel">—</span>
+    <div class="bar-spacer"></div>
+    <button class="city-btn" id="btnCity" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+      <span id="cityName">衢州</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="meta">
+      <span class="upd" id="updLabel">正在取数…</span>
+      <button class="ghost" id="btnRefresh">刷新</button>
+    </div>
+  </header>
+
+  <!-- ===== 城市面板 ===== -->
+  <div class="city-panel" id="cityPanel">
+    <div class="city-search-row">
+      <input class="city-search" id="citySearch" type="search" placeholder="输入城市名筛选，如「杭州」" autocomplete="off">
+      <button class="mode-chip" id="btnGeo">用当前位置</button>
+    </div>
+    <div class="city-list" id="cityList"></div>
+    <div class="city-hint">天气按所选的坐标取数；城市列表内置了全国 50 个常用城市，可直接筛选用。</div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <!-- ===== 今日概况 ===== -->
+  <section class="hero">
+    <div>
+      <div class="temp-line">
+        <div class="temp" id="tempVal"><span class="skel">--</span></div>
+        <div class="temp-side">
+          <div class="wx-name" id="wxDesc">正在获取天气</div>
+          <div class="wx-note" id="wxNote">—</div>
+        </div>
+      </div>
+      <div class="facts">
+        <span class="f-k">现在体感<b id="feelsVal">—</b></span>
+        <span class="f-k">最高<b id="hiVal">—</b></span>
+        <span class="f-k">最低<b id="loVal">—</b></span>
+        <span class="f-k">降水最高<b id="popVal">—</b><i class="f-at" id="popAt"></i></span>
+        <span class="f-k">风<b id="windVal">—</b></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="ctl-group">
+        <div class="ctl-label">通勤时刻</div>
+        <div class="time-row">
+          <label class="time-cell"><span>出门</span><input type="time" id="goTime" value="07:40"></label>
+          <label class="time-cell"><span>下班</span><input type="time" id="offTime" value="18:10"></label>
+        </div>
+        <div class="dur-row">
+          <span>单程</span>
+          <input type="number" id="durMin" value="25" min="1" max="180" step="5" inputmode="numeric" aria-label="单程通勤分钟数">
+          <span>分钟</span>
+          <span class="arr" id="arrLabel">—</span>
+        </div>
+      </div>
+      <div class="ctl-group">
+        <div class="ctl-label">怎么上班</div>
+        <div class="mode-row" id="modeRow">
+          <button data-mode="walk">步行</button>
+          <button data-mode="bike">骑车</button>
+          <button data-mode="transit">公交地铁</button>
+          <button data-mode="drive">开车</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 穿法 ===== -->
+  <section class="wear" data-ready="0">
+    <div class="sec-head">
+      <h2>今天的穿法</h2>
+      <p>按出门时的体感温度定层数，按全天温差定要不要能脱的外套</p>
+    </div>
+    <div class="headline" id="headline">正在生成建议…</div>
+
+    <div class="layers" id="layers">
+      <!-- 三层由 JS 填充 -->
+    </div>
+    <div class="extras" id="extras"></div>
+    <div class="commute-note" id="commuteNote"></div>
+  </section>
+
+  <!-- ===== 温度曲线 ===== -->
+  <section class="chart-sec" data-ready="0">
+    <div class="sec-head">
+      <h2>今天几点最冷</h2>
+      <p>体感、气温与逐小时降水概率，竖线是你的出门与下班时刻</p>
+    </div>
+    <div class="chart-wrap"><div id="chart"></div><div class="ctip" id="ctip"></div></div>
+    <div class="chart-cap" id="chartCap">—</div>
+  </section>
+
+  <!-- ===== 明天 ===== -->
+  <section class="tomorrow" data-ready="0">
+    <div class="sec-head">
+      <h2>明天的穿法</h2>
+      <p>按明天同一个出门时刻算，今晚就能先想好</p>
+    </div>
+    <div class="tm-meta" id="tmMeta">—</div>
+    <div class="tm-sub" id="tmSub">—</div>
+    <div class="tm-head" id="tmHead">—</div>
+    <div class="tm-grid" id="tmGrid"></div>
+  </section>
+
+  <!-- ===== 依据 ===== -->
+  <section class="basis" data-ready="0">
+    <div class="sec-head"><h2>判断依据</h2><p>这几个数决定了上面的每一条建议</p></div>
+    <div class="rows" id="basisRows"></div>
+  </section>
+
+  <footer>
+    <div>天气数据：<span id="srcLabel">Open-Meteo</span> 开放接口，按经纬度实时取数，无需密钥；主源不可达时自动切换 wttr.in 备用源。<br>建议由体感温度分档＋降水、风力、湿度、紫外线加权得出，仅供日常出行参考。</div>
+    <div class="foot-right">单文件本地运行 · 不上传任何数据<br><span id="footStamp"></span></div>
+  </footer>
+</div>
+
+<!-- ===== 主脚本 ===== -->
+<script>
+(function () {
+'use strict';
+
+/* ============================================================
+   1. 内置城市表（离线可用，避免再依赖一个地理编码接口）
+   ============================================================ */
+var CITIES = [
+  ['衢州', 28.94, 118.87, '浙江'], ['杭州', 30.27, 120.16, '浙江'], ['宁波', 29.87, 121.55, '浙江'],
+  ['温州', 28.00, 120.67, '浙江'], ['绍兴', 30.00, 120.58, '浙江'], ['金华', 29.08, 119.65, '浙江'],
+  ['嘉兴', 30.75, 120.76, '浙江'], ['湖州', 30.89, 120.09, '浙江'], ['台州', 28.66, 121.42, '浙江'],
+  ['丽水', 28.45, 119.92, '浙江'], ['舟山', 29.99, 122.21, '浙江'],
+  ['北京', 39.90, 116.41, '北京'], ['上海', 31.23, 121.47, '上海'], ['天津', 39.13, 117.20, '天津'],
+  ['重庆', 29.56, 106.55, '重庆'], ['广州', 23.13, 113.26, '广东'], ['深圳', 22.54, 114.06, '广东'],
+  ['成都', 30.57, 104.07, '四川'], ['武汉', 30.59, 114.31, '湖北'], ['西安', 34.34, 108.94, '陕西'],
+  ['南京', 32.06, 118.80, '江苏'], ['苏州', 31.30, 120.62, '江苏'], ['无锡', 31.49, 120.31, '江苏'],
+  ['徐州', 34.26, 117.19, '江苏'], ['长沙', 28.23, 112.94, '湖南'], ['郑州', 34.75, 113.63, '河南'],
+  ['洛阳', 34.62, 112.45, '河南'], ['济南', 36.65, 117.12, '山东'], ['青岛', 36.07, 120.38, '山东'],
+  ['烟台', 37.46, 121.45, '山东'], ['合肥', 31.82, 117.23, '安徽'], ['福州', 26.07, 119.30, '福建'],
+  ['厦门', 24.48, 118.09, '福建'], ['南昌', 28.68, 115.86, '江西'], ['昆明', 25.04, 102.71, '云南'],
+  ['贵阳', 26.65, 106.63, '贵州'], ['南宁', 22.82, 108.32, '广西'], ['海口', 20.04, 110.32, '海南'],
+  ['太原', 37.87, 112.55, '山西'], ['石家庄', 38.04, 114.51, '河北'], ['呼和浩特', 40.84, 111.75, '内蒙古'],
+  ['兰州', 36.06, 103.83, '甘肃'], ['西宁', 36.62, 101.78, '青海'], ['银川', 38.49, 106.23, '宁夏'],
+  ['乌鲁木齐', 43.83, 87.62, '新疆'], ['拉萨', 29.65, 91.14, '西藏'], ['哈尔滨', 45.80, 126.53, '黑龙江'],
+  ['长春', 43.82, 125.32, '吉林'], ['沈阳', 41.81, 123.43, '辽宁'], ['大连', 38.91, 121.61, '辽宁']
+];
+
+/* WMO 天气代码 → 中文 */
+var WMO = {
+  0: '晴', 1: '大部晴朗', 2: '多云', 3: '阴', 45: '有雾', 48: '雾凇',
+  51: '毛毛雨', 53: '毛毛雨', 55: '密毛毛雨', 56: '冻毛毛雨', 57: '冻毛毛雨',
+  61: '小雨', 63: '中雨', 65: '大雨', 66: '冻雨', 67: '强冻雨',
+  71: '小雪', 73: '中雪', 75: '大雪', 77: '米雪',
+  80: '阵雨', 81: '中阵雨', 82: '强阵雨', 85: '阵雪', 86: '强阵雪',
+  95: '雷阵雨', 96: '雷阵雨伴冰雹', 99: '强雷阵雨伴冰雹'
+};
+
+/* ============================================================
+   2. 状态
+   ============================================================ */
+var DEFAULT_STATE = { city: '衢州', go: '07:40', off: '18:10', mode: 'walk', min: 25 };
+var state = loadState();
+
+function $(id) { return document.getElementById(id); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function loadState() {
+  var s = {};
+  try {
+    var raw = localStorage.getItem('commute_wear_v1');
+    if (raw) s = JSON.parse(raw) || {};
+  } catch (e) {}
+  var out = {};
+  for (var k in DEFAULT_STATE) out[k] = (s[k] === undefined || s[k] === null || s[k] === '') ? DEFAULT_STATE[k] : s[k];
+  return out;
+}
+function saveState() {
+  try { localStorage.setItem('commute_wear_v1', JSON.stringify(state)); } catch (e) {}
+}
+function cityByName(name) {
+  for (var i = 0; i < CITIES.length; i++) if (CITIES[i][0] === name) return CITIES[i];
+  return CITIES[0];
+}
+
+/* ============================================================
+   3. 取数
+   ============================================================ */
+function buildUrl(lat, lon, legacy) {
+  // legacy=true 时退回 Open-Meteo 的旧字段名，用于接口改名后仍能取到数
+  var wc = legacy ? 'weathercode' : 'weather_code';
+  var ws = legacy ? 'windspeed_10m' : 'wind_speed_10m';
+  return 'https://api.open-meteo.com/v1/forecast'
+    + '?latitude=' + lat + '&longitude=' + lon
+    + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,' + wc + ',' + ws
+    + '&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,' + wc + ',' + ws
+    + ',relative_humidity_2m,uv_index'
+    + '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,'
+    + ws + '_max,' + wc + ',sunrise,sunset'
+    + '&timezone=Asia%2FShanghai&forecast_days=2';
+}
+
+/* 把两种字段名统一成新名字，后面的渲染只认一套 */
+function normalize(d) {
+  var groups = [['weather_code', 'weathercode'], ['wind_speed_10m', 'windspeed_10m'],
+    ['wind_speed_10m_max', 'windspeed_10m_max']];
+  var boxes = [d.current, d.hourly, d.daily];
+  for (var b = 0; b < boxes.length; b++) {
+    var box = boxes[b];
+    if (!box) continue;
+    for (var g = 0; g < groups.length; g++) {
+      var nn = groups[g][0], oo = groups[g][1];
+      if (box[nn] === undefined && box[oo] !== undefined) box[nn] = box[oo];
+    }
+  }
+  return d;
+}
+
+/* 主源：Open-Meteo */
+function fetchOpenMeteo(lat, lon) {
+  function attempt(legacy) {
+    var ctrl = null, timer = null;
+    try {
+      if (typeof AbortController !== 'undefined') { ctrl = new AbortController(); }
+    } catch (e) { ctrl = null; }
+    if (ctrl) timer = setTimeout(function () { ctrl.abort(); }, 9000);
+    var opt = { cache: 'no-store' };
+    if (ctrl) opt.signal = ctrl.signal;
+    return fetch(buildUrl(lat, lon, legacy), opt).then(function (r) {
+      if (timer) clearTimeout(timer);
+      if (!r.ok) {
+        var err = new Error('接口返回 HTTP ' + r.status);
+        err.status = r.status;
+        throw err;
+      }
+      return r.json();
+    }, function (e) {
+      if (timer) clearTimeout(timer);
+      throw e;
+    }).then(normalize).then(function (d) { d.__src = 'open-meteo'; return d; });
+  }
+  return attempt(false).catch(function (err) {
+    if (err && err.status === 400) return attempt(true);
+    throw err;
+  });
+}
+
+/* 备用源：wttr.in（WW 天气码 → WMO 码，3 小时间隔插值成逐小时） */
+var WW2WMO = {
+  113: 0, 116: 2, 119: 3, 122: 3, 143: 45, 248: 45, 260: 45,
+  176: 80, 263: 51, 266: 51, 281: 56, 284: 56, 293: 61, 296: 61, 299: 63, 302: 65,
+  305: 65, 308: 65, 311: 66, 314: 67, 353: 80, 356: 82, 359: 82,
+  200: 95, 386: 95, 389: 99, 392: 95, 395: 99,
+  179: 71, 182: 66, 185: 57, 227: 73, 230: 75, 320: 71, 323: 71, 326: 73, 329: 73,
+  332: 75, 335: 75, 338: 75, 350: 77, 362: 85, 365: 85, 368: 85, 371: 86, 374: 85, 377: 86
+};
+
+function wmoOf(ww) {
+  var n = parseInt(ww, 10);
+  return WW2WMO[n] === undefined ? 3 : WW2WMO[n];
+}
+function numOf(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
+function mixNum(a, b, fr) {
+  if (a === null || a === undefined) return (b === undefined ? null : b);
+  if (b === null || b === undefined) return a;
+  return a + (b - a) * fr;
+}
+function to24(s) {
+  var m = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(String(s || ''));
+  if (!m) return '00:00';
+  var h = parseInt(m[1], 10), ap = (m[3] || '').toUpperCase();
+  if (ap === 'PM' && h !== 12) h += 12;
+  if (ap === 'AM' && h === 12) h = 0;
+  return pad(h) + ':' + m[2];
+}
+
+function adaptWttr(j) {
+  if (!j || !j.weather || !j.weather.length) throw new Error('备用源返回结构异常');
+  var cur = (j.current_condition && j.current_condition[0]) || {};
+  var now = new Date();
+  var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  var hourly = {
+    time: [], temperature_2m: [], apparent_temperature: [], precipitation_probability: [],
+    precipitation: [], weather_code: [], wind_speed_10m: [], relative_humidity_2m: [], uv_index: []
+  };
+  var daily = {
+    time: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_probability_max: [],
+    uv_index_max: [], wind_speed_10m_max: [], weather_code: [], sunrise: [], sunset: []
+  };
+  var days = j.weather.slice(0, 2);
+  for (var k = 0; k < days.length; k++) {
+    var day = days[k], hs = day.hourly || [];
+    var pops = [], winds = [];
+    for (var q = 0; q < hs.length; q++) {
+      pops.push(numOf(hs[q].chanceofrain) || 0);
+      winds.push(numOf(hs[q].windspeedKmph) || 0);
+    }
+    daily.time.push(day.date);
+    daily.temperature_2m_max.push(numOf(day.maxtempC));
+    daily.temperature_2m_min.push(numOf(day.mintempC));
+    daily.precipitation_probability_max.push(pops.length ? Math.max.apply(null, pops) : 0);
+    daily.uv_index_max.push(numOf(day.uvIndex));
+    daily.wind_speed_10m_max.push(winds.length ? Math.max.apply(null, winds) : 0);
+    var noon = hs.length > 4 ? hs[4] : hs[0];
+    daily.weather_code.push(noon ? wmoOf(noon.weatherCode) : 3);
+    var ast = (day.astronomy && day.astronomy[0]) || {};
+    daily.sunrise.push(day.date + 'T' + to24(ast.sunrise));
+    daily.sunset.push(day.date + 'T' + to24(ast.sunset));
+
+    for (var h = 0; h < 24; h++) {
+      hourly.time.push(hourKey(day.date, h));
+      var lo = Math.floor(h / 3), hi = Math.min(lo + 1, hs.length - 1);
+      var a = hs[lo], b = hs[hi];
+      if (!a) {
+        hourly.temperature_2m.push(null); hourly.apparent_temperature.push(null);
+        hourly.precipitation_probability.push(null); hourly.precipitation.push(null);
+        hourly.wind_speed_10m.push(null); hourly.relative_humidity_2m.push(null);
+        hourly.uv_index.push(null); hourly.weather_code.push(null);
+        continue;
+      }
+      var fr = (h - lo * 3) / 3;
+      hourly.temperature_2m.push(mixNum(numOf(a.tempC), numOf(b.tempC), fr));
+      hourly.apparent_temperature.push(mixNum(numOf(a.FeelsLikeC), numOf(b.FeelsLikeC), fr));
+      hourly.precipitation_probability.push(Math.round(mixNum(numOf(a.chanceofrain), numOf(b.chanceofrain), fr) || 0));
+      hourly.precipitation.push(mixNum(numOf(a.precipMM), numOf(b.precipMM), fr));
+      hourly.wind_speed_10m.push(mixNum(numOf(a.windspeedKmph), numOf(b.windspeedKmph), fr));
+      hourly.relative_humidity_2m.push(mixNum(numOf(a.humidity), numOf(b.humidity), fr));
+      hourly.uv_index.push(mixNum(numOf(a.uvIndex), numOf(b.uvIndex), fr));
+      hourly.weather_code.push(wmoOf(a.weatherCode));
+    }
+  }
+  var data = {
+    latitude: 0, longitude: 0, timezone: 'Asia/Shanghai',
+    __src: 'wttr.in',
+    current: {
+      time: today + 'T' + pad(now.getHours()) + ':00',
+      temperature_2m: numOf(cur.temp_C),
+      apparent_temperature: numOf(cur.FeelsLikeC),
+      relative_humidity_2m: numOf(cur.humidity),
+      precipitation: numOf(cur.precipMM),
+      weather_code: wmoOf(cur.weatherCode),
+      wind_speed_10m: numOf(cur.windspeedKmph)
+    },
+    hourly: hourly,
+    daily: daily
+  };
+  return normalize(data);
+}
+
+function fetchWttr(lat, lon) {
+  var ctrl = null, timer = null;
+  try { if (typeof AbortController !== 'undefined') ctrl = new AbortController(); } catch (e) { ctrl = null; }
+  if (ctrl) timer = setTimeout(function () { ctrl.abort(); }, 12000);
+  var opt = { cache: 'no-store' };
+  if (ctrl) opt.signal = ctrl.signal;
+  return fetch('https://wttr.in/' + lat + ',' + lon + '?format=j1', opt).then(function (r) {
+    if (timer) clearTimeout(timer);
+    if (!r.ok) throw new Error('备用源返回 HTTP ' + r.status);
+    return r.json();
+  }, function (e) { if (timer) clearTimeout(timer); throw e; }).then(adaptWttr);
+}
+
+/* 先 Open-Meteo，失败再换备用源；两个都挂才报错 */
+function fetchWeather(lat, lon) {
+  return fetchOpenMeteo(lat, lon).catch(function (e1) {
+    return fetchWttr(lat, lon).catch(function (e2) {
+      var err = new Error('Open-Meteo: ' + (e1 && e1.message ? e1.message : e1)
+        + '；备用源 wttr.in: ' + (e2 && e2.message ? e2.message : e2));
+      throw err;
+    });
+  });
+}
+
+/* ============================================================
+   4. 时间取值（按小时线性插值）
+   ============================================================ */
+function hourKey(date, h) { return date + 'T' + pad(h) + ':00'; }
+
+function idxMap(hourly) {
+  var m = {};
+  for (var i = 0; i < hourly.time.length; i++) m[hourly.time[i]] = i;
+  return m;
+}
+
+function interp(hourly, map, date, hourFloat, key) {
+  var h0 = Math.floor(hourFloat);
+  var h1 = Math.min(h0 + 1, 23);
+  var i0 = map[hourKey(date, h0)];
+  var i1 = map[hourKey(date, h1)];
+  var arr = hourly[key];
+  if (i0 === undefined) return null;
+  if (i1 === undefined || h1 === h0) return arr[i0];
+  var f = hourFloat - h0;
+  var a = arr[i0], b = arr[i1];
+  if (a === null || a === undefined) return b;
+  if (b === null || b === undefined) return a;
+  return a + (b - a) * f;
+}
+
+function parseHHMM(s) {
+  var p = String(s || '').split(':');
+  var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+  if (isNaN(h) || isNaN(m)) return 8;
+  return Math.min(23.9, Math.max(0, h + m / 60));
+}
+
+/* 单程分钟数：1–180，缺省 25 */
+function clampMin(v) {
+  v = parseInt(v, 10);
+  if (isNaN(v)) return 25;
+  return Math.max(1, Math.min(180, v));
+}
+
+/* 小数小时 → HH:MM */
+function hmFromFloat(t) {
+  t = Math.max(0, Math.min(23.983, t));
+  var h = Math.floor(t), m = Math.round((t - h) * 60);
+  if (m >= 60) { m = 0; h = Math.min(23, h + 1); }
+  return pad(h) + ':' + pad(m);
+}
+
+/* 接口给的当前时刻（本地时区），用来排除已经过去的小时 */
+function nowHourOf(d) {
+  var m = /T(\d{2})/.exec((d.current && d.current.time) || '');
+  if (m) return parseInt(m[1], 10);
+  return new Date().getHours();
+}
+
+/* 某段时间内最大的降水概率：t0/t1 是小数小时，用于只看通勤那一段
+   今天只算「现在以后」，否则凌晨那场雨会一直算到晚上 */
+function maxPopRange(d, t0, t1, dayIdx) {
+  dayIdx = dayIdx || 0;
+  var map = d.__map || (d.__map = idxMap(d.hourly));
+  if (dayIdx === 0) {
+    var nh = nowHourOf(d);
+    if (nh !== null && nh > t0) t0 = nh;
+  }
+  var date = d.daily.time[dayIdx] || d.daily.time[0];
+  var best = 0, bestH = null;
+  var h0 = Math.max(0, Math.floor(t0)), h1 = Math.min(23, Math.ceil(t1));
+  for (var h = h0; h <= h1; h++) {
+    var i = map[hourKey(date, h)];
+    if (i === undefined) continue;
+    var v = d.hourly.precipitation_probability[i];
+    if (v !== null && v !== undefined && v > best) { best = v; bestH = h; }
+  }
+  return { v: best, h: bestH };
+}
+
+/* 顶栏下面那行「到岗 08:05」，不依赖接口数据也能算 */
+function updateArrLabel() {
+  var el = $('arrLabel');
+  if (!el) return;
+  var g = parseHHMM(state.go), m = clampMin(state.min);
+  el.textContent = '到岗 ' + hmFromFloat(g + m / 60);
+}
+
+function sampleAt(data, hhmm, dayIdx) {
+  var map = data.__map || (data.__map = idxMap(data.hourly));
+  var date = data.daily.time[dayIdx || 0] || data.daily.time[0];
+  var t = parseHHMM(hhmm);
+  var feels = interp(data.hourly, map, date, t, 'apparent_temperature');
+  var temp = interp(data.hourly, map, date, t, 'temperature_2m');
+  var wind = interp(data.hourly, map, date, t, 'wind_speed_10m');
+  var uv = interp(data.hourly, map, date, t, 'uv_index');
+  var h = Math.round(t);
+  var i = map[hourKey(date, Math.min(h, 23))];
+  var code = i !== undefined ? data.hourly.weather_code[i] : data.current.weather_code;
+  var p0 = map[hourKey(date, Math.floor(t))], p1 = map[hourKey(date, Math.min(Math.ceil(t), 23))];
+  var pop = 0;
+  if (p0 !== undefined && data.hourly.precipitation_probability[p0] != null) pop = data.hourly.precipitation_probability[p0];
+  if (p1 !== undefined && data.hourly.precipitation_probability[p1] != null) pop = Math.max(pop, data.hourly.precipitation_probability[p1]);
+  return { t: t, feels: feels, temp: temp, wind: wind, uv: uv, code: code, pop: pop };
+}
+
+/* ============================================================
+   5. 穿衣分档（按“出门体感温度”）
+   ============================================================ */
+var TIERS = [
+  { min: 29, name: '盛夏', ico: 'tee',
+    inner: '棉或速干短袖，浅色更凉快', mid: '不用加中层', outer: '不带外套，空调房放件薄开衫',
+    bottom: '薄长裤 / 及膝裙', shoe: '透气运动鞋', carry: '防晒、水瓶' },
+  { min: 25, name: '偏热', ico: 'tee',
+    inner: '短袖 T 恤', mid: '不用加中层', outer: '薄衬衫可当外搭带上',
+    bottom: '薄长裤 / 九分裤', shoe: '运动鞋或乐福鞋', carry: '折叠伞（晒也挡）' },
+  { min: 22, name: '舒适', ico: 'shirt',
+    inner: '长袖 T 或薄衬衫，单层就好', mid: '薄针织备着（早晚凉）', outer: '不用，或薄开衫',
+    bottom: '休闲西裤 / 牛仔裤', shoe: '乐福鞋、板鞋', carry: '一件薄外搭' },
+  { min: 19, name: '微凉', ico: 'shirt',
+    inner: '长袖衬衫或薄长袖', mid: '不需要', outer: '薄西装 / 薄开衫',
+    bottom: '长裤（棉、混纺都行）', shoe: '乐福鞋、正装皮鞋', carry: '薄围巾可选' },
+  { min: 16, name: '凉', ico: 'knit',
+    inner: '长袖打底或衬衫', mid: '薄针织 / 卫衣', outer: '夹克 / 薄西装',
+    bottom: '长裤', shoe: '皮鞋或运动鞋', carry: '不需要' },
+  { min: 12, name: '冷', ico: 'knit',
+    inner: '棉质长袖打底', mid: '薄毛衣 / 针织衫', outer: '夹克 / 风衣',
+    bottom: '长裤', shoe: '皮质鞋、厚底鞋', carry: '不需要' },
+  { min: 8, name: '较冷', ico: 'coat',
+    inner: '棉质长袖打底（怕冷可加薄发热内衣）', mid: '中等厚度毛衣 / 卫衣', outer: '风衣 / 呢大衣 / 薄棉服',
+    bottom: '加绒裤或秋裤打底', shoe: '保暖皮鞋、短靴', carry: '围巾、手套' },
+  { min: 4, name: '寒冷', ico: 'coat',
+    inner: '保暖内衣 或 加绒打底（二选一，单层）', mid: '厚毛衣 / 抓绒卫衣', outer: '羽绒服 / 厚呢大衣',
+    bottom: '秋裤 + 加绒裤', shoe: '保暖靴', carry: '围巾、手套' },
+  { min: -6, name: '严寒', ico: 'down',
+    inner: '发热内衣 + 抓绒打底', mid: '厚毛衣', outer: '厚羽绒服',
+    bottom: '秋裤 + 加绒裤', shoe: '保暖雪地靴', carry: '围巾、手套、帽子' },
+  { min: -99, name: '极寒', ico: 'down',
+    inner: '三层打底（发热 + 抓绒）', mid: '厚毛衣或羊毛衫', outer: '长款厚羽绒，长及膝',
+    bottom: '秋裤 + 加绒裤', shoe: '雪地靴 + 厚袜', carry: '围巾、手套、帽子全套' }
+];
+
+function pickTier(feels) {
+  if (feels === null || feels === undefined) return TIERS[4];
+  for (var i = 0; i < TIERS.length; i++) if (feels >= TIERS[i].min) return TIERS[i];
+  return TIERS[TIERS.length - 1];
+}
+
+/* 主建议、出门行、明天区块共用的一套穿法组合，避免和三层网格对不上 */
+function tierCombo(t) {
+  var parts = [t.inner];
+  if (t.mid && !/^(不用|不需要)/.test(t.mid)) parts.push(t.mid);
+  parts.push(t.outer);
+  return parts.join(' + ');
+}
+
+/* 蒲福风级换算（km/h） */
+function beaufort(kmh) {
+  var t = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
+  if (kmh === null || kmh === undefined) return null;
+  for (var i = 0; i < t.length; i++) if (kmh < t[i]) return i;
+  return 12;
+}
+
+/* 通勤时段降水分级（按概率） */
+function rainLevel(pop) {
+  if (pop == null) return null;
+  if (pop >= 70) return { key: 'heavy', label: '大概率下雨', gear: '雨衣优先，外套选防水面料，鞋别穿帆布、麂皮' };
+  if (pop >= 40) return { key: 'wet', label: '可能下雨', gear: '带折叠伞，外套和鞋挑不怕湿的' };
+  if (pop >= 20) return { key: 'spot', label: '零星飘雨可能', gear: '外套选防泼水的，随身带把折叠伞稳妥' };
+  return { key: 'dry', label: '基本不下雨', gear: '不用带伞' };
+}
+
+/* 通勤时段风力分级（km/h） */
+function windLevel(kmh) {
+  if (kmh == null) return null;
+  var b = beaufort(kmh);
+  if (kmh >= 29) return { b: b, label: '风偏大', gear: '外层要防风收口，围巾或帽子护住头颈' };
+  if (kmh >= 20) return { b: b, label: '风不小', gear: '外层挑能拉上拉链或扣严的防风款，别敞着穿' };
+  if (kmh >= 12) return { b: b, label: '有点风', gear: '外层下摆、领口选能收住的，别让风往里灌' };
+  return { b: b, label: '风不大', gear: '正常穿就行' };
+}
+
+function uvText(uv) {
+  if (uv === null || uv === undefined) return '—';
+  if (uv < 3) return '弱';
+  if (uv < 6) return '中等';
+  if (uv < 8) return '强';
+  if (uv < 11) return '很强';
+  return '极强';
+}
+
+/* ============================================================
+   6. 图形：衣物图标
+   ============================================================ */
+var ICONS = {
+  tee: '<path d="M17 11 L9 16 L12 25 L16 23 L16 38 L32 38 L32 23 L36 25 L39 16 L31 11 Q24 15 17 11 Z"/>',
+  shirt: '<path d="M17 10 L9 16 L12 26 L16 24 L16 39 L32 39 L32 24 L36 26 L39 16 L31 10"/><path d="M20 10 L24 16 L28 10"/><path d="M24 18 L24 39"/>',
+  knit: '<path d="M16 14 L7 20 L10 31 L14 29 L14 39 L34 39 L34 29 L38 31 L41 20 L32 14 Q24 19 16 14 Z"/><path d="M14 34 L34 34"/>',
+  coat: '<path d="M16 11 L7 18 L10 32 L14 31 L14 41 L34 41 L34 31 L38 32 L41 18 L32 11"/><path d="M16 11 L24 18 L32 11"/><path d="M24 21 L24 41"/>',
+  down: '<path d="M16 11 L7 18 L10 32 L14 31 L14 41 L34 41 L34 31 L38 32 L41 18 L32 11"/><path d="M16 11 L24 18 L32 11"/><path d="M14 25 L34 25"/><path d="M14 32 L34 32"/>',
+  none: '<path d="M18 25 L30 25" opacity=".45"/>',
+  pants: '<path d="M15 12 L33 12 L32 40 L25 40 L24 22 L23 40 L16 40 Z"/>',
+  shoe: '<path d="M13 29 Q13 26 19 26 L26 26 L34 30 Q37 32 35 34 L13 34 Z"/><path d="M13 31 L35 31" opacity=".5"/>',
+  bag: '<path d="M12 21 L36 21 L34 40 L14 40 Z"/><path d="M19 21 Q19 12 24 12 Q29 12 29 21"/>'
+};
+
+function iconSvg(name, cls) {
+  var d = ICONS[name] || ICONS.none;
+  return '<svg class="' + (cls || 'layer-ico') + '" viewBox="0 0 48 48" fill="none" stroke="currentColor" '
+    + 'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' + d + '</svg>';
+}
+
+/* ============================================================
+   7. 渲染
+   ============================================================ */
+var lastData = null;
+
+function setStatus(msg, retry) {
+  var el = $('status');
+  if (!msg) { el.removeAttribute('data-on'); el.innerHTML = ''; return; }
+  el.setAttribute('data-on', '1');
+  el.innerHTML = msg + (retry ? '<button type="button" id="btnRetry">重试</button>' : '');
+  if (retry) $('btnRetry').onclick = function () { refresh(); };
+}
+
+function padTemp(v) { return (v === null || v === undefined) ? '—' : Math.round(v); }
+
+function render(d) {
+  lastData = d;
+  var secs = ['wear', 'chart-sec', 'tomorrow', 'basis'];
+  for (var si = 0; si < secs.length; si++) {
+    var se = document.querySelector('.' + secs[si]);
+    if (se) se.setAttribute('data-ready', '1');
+  }
+  var date = d.daily.time[0];
+  var go = sampleAt(d, state.go);
+  var off = sampleAt(d, state.off);
+  var mins = clampMin(state.min);
+  var arrT = go.t + mins / 60;
+  var arr = sampleAt(d, hmFromFloat(arrT));
+  updateArrLabel();
+
+  /* --- 顶栏 --- */
+  var dd = new Date(date + 'T00:00:00');
+  var wk = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dd.getDay()];
+  $('todayLabel').textContent = (dd.getMonth() + 1) + '月' + dd.getDate() + '日 ' + wk;
+  var now = new Date();
+  $('updLabel').textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' 更新';
+  if ($('srcLabel')) $('srcLabel').textContent = d.__src === 'wttr.in' ? 'wttr.in（备用源）' : 'Open-Meteo';
+  $('footStamp').textContent = '数据时间 ' + date + ' · Asia/Shanghai';
+
+  /* --- 概况 --- */
+  $('tempVal').innerHTML = padTemp(d.current.temperature_2m) + '<span class="deg">°</span>';
+  $('wxDesc').textContent = WMO[d.current.weather_code] || '未知天气';
+  var sr = (d.daily.sunrise[0] || '').slice(11, 16);
+  var ss = (d.daily.sunset[0] || '').slice(11, 16);
+  $('wxNote').textContent = '日出 ' + sr + ' · 日落 ' + ss;
+  $('feelsVal').textContent = padTemp(d.current.apparent_temperature) + '°';
+  $('hiVal').textContent = padTemp(d.daily.temperature_2m_max[0]) + '°';
+  $('loVal').textContent = padTemp(d.daily.temperature_2m_min[0]) + '°';
+  var pkDay = maxPopRange(d, 0, 23, 0);
+  var hasHourlyPop = !!(d.hourly && d.hourly.precipitation_probability
+    && d.hourly.precipitation_probability.length);
+  var dailyPop = hasHourlyPop ? pkDay.v : (d.daily.precipitation_probability_max[0] || 0);
+  $('popVal').textContent = dailyPop + '%';
+  $('popAt').textContent = (pkDay.h === null ? '' : '（' + pad(pkDay.h) + ':00）');
+  var bw = beaufort(d.current.wind_speed_10m);
+  $('windVal').textContent = (d.current.wind_speed_10m == null ? '—' : Math.round(d.current.wind_speed_10m) + ' km/h' + (bw === null ? '' : ' ' + bw + ' 级'));
+
+  /* --- 主建议 --- */
+  var tier = pickTier(go.feels);
+  var span = (go.feels === null || off.feels === null) ? null : Math.abs(off.feels - go.feels);
+  var goWin = maxPopRange(d, go.t, arrT);
+  var offWin = maxPopRange(d, off.t, off.t + 0.75);
+  var rainPop = Math.max(goWin.v, offWin.v);
+  var windMax = Math.max(go.wind || 0, off.wind || 0);
+  var windy = windMax >= 20;
+  var rl = rainLevel(rainPop);
+  var wl = windLevel(windMax);
+  var head = [];
+
+  head.push('出门体感 <em>' + Math.round(go.feels) + '°</em>，' + tier.name + '档：' + tierCombo(tier) + '。');
+  if (span !== null && span >= 6) {
+    head.push('全天 <em>' + Math.round(d.daily.temperature_2m_min[0]) + '°→' + Math.round(d.daily.temperature_2m_max[0]) + '°</em>，温差 ' + Math.round(span) + '℃，外套一定要能脱下来拿在手上。');
+  } else if (span !== null && span >= 3) {
+    head.push('温差 ' + Math.round(span) + '℃，中层选开衫、衬衫这类能单穿也能外搭的。');
+  }
+  if (rl.key === 'heavy' || rl.key === 'wet' || rl.key === 'spot') {
+    var segName = goWin.v >= offWin.v
+      ? '出门这段（' + state.go + '–' + hmFromFloat(arrT) + '）'
+      : '下班路上这段';
+    head.push(segName + '降水概率 <em>' + Math.round(rainPop) + '%</em>，' + rl.label + '，' + rl.gear + '。');
+  } else if (dailyPop >= 40) {
+    head.push('今天' + (pkDay.h === null ? '晚些时候' : ' ' + pad(pkDay.h) + ':00 前后') + '降水概率到 '
+      + Math.round(dailyPop) + '%，那个点你还在外面的话带把伞。');
+  }
+  var rh = d.current.relative_humidity_2m;
+  if (go.feels < 12 && rh != null && rh >= 85) {
+    head.push('湿度 <em>' + Math.round(rh) + '%</em>，湿冷更透衣，中层选抓绒或羊毛，别靠往内层叠衣服硬扛。');
+  }
+  if (wl.b >= 3) head.push('风 ' + wl.b + ' 级（' + Math.round(windMax) + ' km/h），' + wl.gear + '。');
+  $('headline').innerHTML = head.join(' ');
+
+  /* --- 三层 --- */
+  var innerIco = (tier.ico === 'shirt' || tier.ico === 'knit') ? 'shirt' : 'tee';
+  var midIco = (tier.mid === '不用加中层' || tier.mid === '不需要' || tier.mid === '不用，或薄开衫') ? 'none' : 'knit';
+  var outerIco = (tier.ico === 'coat' || tier.ico === 'down') ? tier.ico
+    : (tier.ico === 'knit' ? 'coat' : (tier.ico === 'shirt' ? 'shirt' : 'none'));
+  var layers = [
+    ['内搭', innerIco, tier.inner],
+    ['中层', midIco, tier.mid],
+    ['外套', outerIco, tier.outer]
+  ];
+  var html = '';
+  for (var i = 0; i < layers.length; i++) {
+    html += '<div class="layer"><div class="layer-top">'
+      + iconSvg(layers[i][1], 'layer-ico')
+      + '<span class="layer-tag">' + layers[i][0] + '</span></div>'
+      + '<div class="layer-txt' + (layers[i][1] === 'none' ? ' muted' : '') + '">' + layers[i][2] + '</div></div>';
+  }
+  $('layers').innerHTML = html;
+
+  /* --- 下装 / 鞋 / 随身 --- */
+  var shoeTxt = tier.shoe;
+  if (rl.key === 'heavy') shoeTxt = '防水防滑鞋，避开帆布、麂皮';
+  else if (rl.key === 'wet') shoeTxt = tier.shoe + '，挑不怕湿的';
+  else if (rl.key === 'spot') shoeTxt = tier.shoe + '，避开易湿面料';
+  var carry = [tier.carry];
+  if (rl.key === 'heavy') carry.push('雨衣');
+  else if (rl.key === 'wet') carry.push('折叠伞');
+  else if (rl.key === 'spot') carry.push('折叠伞（可选）');
+  if (wl.b >= 5) carry.push('围巾 / 帽子挡风');
+  if (Math.max(go.uv || 0, off.uv || 0) >= 6) carry.push('防晒霜 / 帽子');
+  if (state.mode === 'bike' && windMax >= 25) carry.push('骑车加手套');
+  var carryTxt = carry.filter(function (x) { return x && x !== '不需要'; }).join('；') || '不需要额外带东西';
+  $('extras').innerHTML =
+    '<div class="extra"><div class="k">下装</div><div class="v">' + tier.bottom + '</div></div>'
+    + '<div class="extra"><div class="k">鞋</div><div class="v">' + shoeTxt + '</div></div>'
+    + '<div class="extra"><div class="k">随身</div><div class="v">' + carryTxt + '</div></div>';
+
+  /* --- 出门 / 下班 对比 --- */
+  var goTierTxt = (tier.name + '档：' + tierCombo(tier));
+  var offTxt;
+  if (off.feels === null) offTxt = '缺少该时刻数据。';
+  else {
+    var diff = off.feels - go.feels;
+    var offT = pickTier(off.feels);
+    if (Math.abs(diff) < 2) {
+      offTxt = '和出门差不多（' + Math.round(off.feels) + '℃），早上那套原样穿回来就行。';
+    } else if (diff > 0) {
+      offTxt = '比出门暖 ' + Math.round(diff) + '℃，' + (diff >= 5
+        ? '外套脱下来拿着，中层单穿就够，别穿成早上那样厚。'
+        : '外套敞开或脱掉就行。');
+    } else {
+      offTxt = '比出门冷 ' + Math.round(-diff) + '℃'
+        + (offT === tier ? '，早上那套原样穿回来。' : '，下班得加一层，包里塞件' + (offT.ico === 'coat' || offT.ico === 'down' ? '外套' : '针织衫') + '。');
+    }
+  }
+  var arrTxt;
+  if (arr.feels === null) arrTxt = '这段路缺少逐小时数据。';
+  else {
+    var segDiff = arr.feels - go.feels;
+    if (Math.abs(segDiff) < 2) arrTxt = '这 ' + mins + ' 分钟里体感基本没变，按出门那套走完就行。';
+    else if (segDiff < 0) arrTxt = '路上会一路降到 ' + Math.round(arr.feels) + '℃，外套别在出站时就脱。';
+    else arrTxt = '路上会升到 ' + Math.round(arr.feels) + '℃，到岗时外套可以敞开或脱掉。';
+  }
+  var routeTxt = routeNote(go, arr, rainPop, windy);
+  $('commuteNote').innerHTML =
+    '<div class="cn-cell"><div class="cn-k">出门 <b>' + state.go + '</b><b>' + Math.round(go.feels) + '°</b></div>'
+    + '<div class="cn-v">' + goTierTxt + '</div></div>'
+    + '<div class="cn-cell"><div class="cn-k">到岗 <b>' + hmFromFloat(arrT) + '</b><b>' + (arr.feels === null ? '—' : Math.round(arr.feels) + '°') + '</b></div>'
+    + '<div class="cn-v">' + arrTxt + '</div></div>'
+    + '<div class="cn-cell full"><div class="cn-k">下班 <b>' + state.off + '</b><b>' + (off.feels === null ? '—' : Math.round(off.feels) + '°') + '</b></div>'
+    + '<div class="cn-v">' + offTxt + '</div></div>'
+    + '<div class="cn-cell full"><div class="cn-k">路上 <b>' + mins + '</b> 分钟</div><div class="cn-v">' + routeTxt + '</div></div>';
+
+  /* --- 明天 --- */
+  var tmSec = document.querySelector('.tomorrow');
+  var tmDate = d.daily.time[1];
+  if (!tmDate) {
+    if (tmSec) tmSec.setAttribute('data-ready', '0');
+  } else {
+    var tg = sampleAt(d, state.go, 1);
+    var tt = pickTier(tg.feels);
+    var tdd = new Date(tmDate + 'T00:00:00');
+    var twk = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][tdd.getDay()];
+    var tPop = d.daily.precipitation_probability_max[1];
+    var tPk = maxPopRange(d, 0, 23, 1);
+    var tPopWin = maxPopRange(d, go.t, arrT, 1).v;
+    var tWind = d.daily.wind_speed_10m_max[1];
+    $('tmMeta').innerHTML =
+      '<span>明天 <b>' + (tdd.getMonth() + 1) + '月' + tdd.getDate() + '日 ' + twk + '</b></span>'
+      + '<span>' + (WMO[d.daily.weather_code[1]] || '—') + '</span>'
+      + '<span>最高 <b>' + padTemp(d.daily.temperature_2m_max[1]) + '°</b></span>'
+      + '<span>最低 <b>' + padTemp(d.daily.temperature_2m_min[1]) + '°</b></span>'
+      + '<span>降水 <b>' + (tPop == null ? '—' : tPop + '%') + '</b>'
+      + (tPk.h === null ? '' : '<i>（' + pad(tPk.h) + ':00）</i>') + '</span>'
+      + '<span>风 <b>' + (tWind == null ? '—' : Math.round(tWind) + ' km/h') + '</b></span>';
+
+    $('tmSub').innerHTML = '出门 ' + state.go + ' 气温 <b>' + padTemp(tg.temp) + '°</b> '
+      + '<span class="g"></span>体感 <b>' + padTemp(tg.feels) + '°</b>';
+
+    var tHead = [];
+    tHead.push('出门体感 <em>' + Math.round(tg.feels) + '°</em>，' + tt.name + '档：' + tierCombo(tt) + '。');
+    var tDiff = (tg.feels === null || go.feels === null) ? null : Math.round(tg.feels - go.feels);
+    if (tDiff !== null && Math.abs(tDiff) >= 2) {
+      tHead.push('比今天' + (tDiff > 0 ? '暖 ' : '冷 ') + Math.abs(tDiff) + '℃' + (tDiff > 0 ? '，可以少一层。' : '，同一时刻得多加一层。'));
+    } else if (tDiff !== null) {
+      tHead.push('和今天差不多，按今天那套准备就行。');
+    }
+    $('tmHead').innerHTML = tHead.join(' ');
+
+    var tCarry = [tt.carry];
+    if (tPopWin >= 70) tCarry.push('雨衣优先');
+    else if (tPopWin >= 40) tCarry.push('折叠伞');
+    else if (tPopWin >= 20) tCarry.push('折叠伞（可选）');
+    if ((tWind || 0) >= 20) tCarry.push('防风外套');
+    var tCarryTxt = tCarry.filter(function (x) { return x && x !== '不需要'; }).join('；') || '不用额外带东西';
+    $('tmGrid').innerHTML = [
+      ['内搭', tt.inner], ['中层', tt.mid], ['外套', tt.outer],
+      ['下装', tt.bottom], ['鞋', tt.shoe], ['随身', tCarryTxt]
+    ].map(function (c) {
+      return '<div class="tm-cell"><div class="k">' + c[0] + '</div><div class="v">' + c[1] + '</div></div>';
+    }).join('');
+  }
+
+  /* --- 依据 --- */
+  var tierIdx = TIERS.indexOf(tier);
+  var rows = [
+    { k: '出门体感', v: Math.round(go.feels) + '℃', p: (go.feels + 10) / 45, note: '第 ' + (tierIdx + 1) + ' 档（' + tier.name + '）' },
+    { k: '全天温差', v: Math.round(d.daily.temperature_2m_min[0]) + '→' + Math.round(d.daily.temperature_2m_max[0]) + '℃', p: Math.min(1, (d.daily.temperature_2m_max[0] - d.daily.temperature_2m_min[0]) / 18), note: (d.daily.temperature_2m_max[0] - d.daily.temperature_2m_min[0]) >= 6 ? '算大，叠穿 + 能脱' : '不大，一套穿住' },
+    { k: '通勤时段降水', v: Math.round(rainPop) + '%', p: rainPop / 100, warn: rainPop >= 40,
+      note: (rl.key === 'heavy' ? '大概率下，备雨衣' : (rl.key === 'wet' ? '可能下，带伞' : (rl.key === 'spot' ? '零星飘雨，备伞稳妥' : '基本不用带伞')))
+        + (dailyPop > rainPop + 5 ? '；今天剩余时段最高 ' + Math.round(dailyPop) + '%'
+          + (pkDay.h === null ? '' : ' 在 ' + pad(pkDay.h) + ':00') : '') },
+    { k: '风', v: Math.round(windMax) + 'km/h', p: windMax / 45, warn: windy, note: wl.b >= 3 ? (wl.b + ' 级，' + wl.gear) : '不算大' },
+    { k: '湿度', v: Math.round(d.current.relative_humidity_2m || 0) + '%', p: (d.current.relative_humidity_2m || 0) / 100, note: (d.current.relative_humidity_2m || 0) >= 80 && go.temp >= 24 ? '闷，选透气速干面料' : '正常' },
+    { k: '紫外线', v: Math.round(Math.max(go.uv || 0, off.uv || 0)) + ' 级', p: Math.min(1, Math.max(go.uv || 0, off.uv || 0) / 11), warn: Math.max(go.uv || 0, off.uv || 0) >= 6, note: uvText(Math.max(go.uv || 0, off.uv || 0)) + (Math.max(go.uv || 0, off.uv || 0) >= 6 ? '，需要防晒' : '') }
+  ];
+  $('basisRows').innerHTML = rows.map(function (r) {
+    return '<div class="row"><div class="k">' + r.k + '</div>'
+      + '<div class="m"><div class="meter"><div class="fill' + (r.warn ? ' warn' : '')
+      + '" style="width:' + Math.max(0, Math.min(100, r.p * 100)) + '%"></div></div>'
+      + '<div class="note">' + r.note + '</div></div>'
+      + '<div class="val">' + r.v + '</div></div>';
+  }).join('');
+
+  /* --- 图表 --- */
+  lastCtx = { go: go, off: off };
+  drawChart(d, go, off);
+}
+
+function routeNote(go, arr, rainPop, windy) {
+  var mode = state.mode;
+  var mins = clampMin(state.min);
+  var out = [];
+  if (mode === 'bike') {
+    if (rainPop >= 40) out.push('骑车下雨别打伞，用雨衣 + 速干裤脚。');
+    if (windy) out.push('风大逆风路段费腿，留早 5 分钟，外套选收口的。');
+    if (go.feels !== null && go.feels <= 12) out.push('骑车体感更低 2–3℃，手套别忘。');
+    if (mins >= 30) out.push('单程骑 ' + mins + ' 分钟，出门前看一眼胎压和电量。');
+  } else if (mode === 'walk') {
+    if (rainPop >= 40) out.push('走路上班备伞 + 防滑鞋，浅色裤脚容易溅湿。');
+    if (Math.max(go.uv || 0) >= 6) out.push('早上太阳已经够晒，帽檐或墨镜带上。');
+    if (mins >= 30) out.push('单程走 ' + mins + ' 分钟，鞋和袜子按能久走的选，别穿新鞋。');
+  } else if (mode === 'transit') {
+    out.push('车上闷、站台冷，外套选好脱好穿的，别扣太复杂。');
+    if (rainPop >= 40) out.push('站台等车淋雨时间比想象长，带折叠伞。');
+    if (mins >= 45 && (go.temp >= 24 || off.temp >= 24)) out.push('单程 ' + mins + ' 分钟偏长，车里冷气足，包里塞件薄外搭。');
+  } else {
+    out.push('车里外温差大，外套别太厚，影响操作。');
+    if (go.feels !== null && go.feels <= 8) out.push('早上车窗结霜，留出预热时间。');
+    if (mins >= 45) out.push('单程 ' + mins + ' 分钟，出发前把除雾和暖风先开起来。');
+  }
+  if (!out.length) out.push('路况正常，按上面的穿法出门就行。');
+  return out.join(' ');
+}
+
+/* ============================================================
+   8. 温度曲线：原生 SVG 绘制，不依赖外部脚本
+   ============================================================ */
+var chartGeom = null;
+var chartTimer = null;
+var lastCtx = null;
+
+function drawChart(d, go, off) {
+  var wrap = $('chart');
+  if (!wrap) return;
+
+  var date = d.daily.time[0];
+  var map = d.__map || (d.__map = idxMap(d.hourly));
+  var H0 = 6, H1 = 22;
+  var pts = [], lo = 1e9, hi = -1e9, loH = H0, hiH = H0;
+  for (var h = H0; h <= H1; h++) {
+    var i = map[hourKey(date, h)];
+    var fv = i === undefined ? null : d.hourly.apparent_temperature[i];
+    var tv = i === undefined ? null : d.hourly.temperature_2m[i];
+    var pv = i === undefined ? null : d.hourly.precipitation_probability[i];
+    pts.push({ h: h, f: fv, t: tv, p: pv });
+    if (fv !== null && fv !== undefined) {
+      if (fv < lo) { lo = fv; loH = h; }
+      if (fv > hi) { hi = fv; hiH = h; }
+    }
+  }
+  if (lo === 1e9) {
+    wrap.innerHTML = '';
+    $('chartCap').textContent = '没取到这一天的逐小时数据。';
+    return;
+  }
+
+  $('chartCap').textContent = '全天体感最低 ' + Math.round(lo) + '℃ 出现在 ' + pad(loH) + ':00，最高 '
+    + Math.round(hi) + '℃ 出现在 ' + pad(hiH) + ':00；实线是体感温度，虚线是实际气温，钢蓝细线是逐小时降水概率（右侧 0–100% 刻度）。';
+
+  var W = wrap.clientWidth, H = wrap.clientHeight;
+  if (!W || !H) return;
+  var narrow = W < 520;
+  var L = narrow ? 28 : 34, R = narrow ? 26 : 34, T = 44, B = 24;
+  var iw = W - L - R, ih = H - T - B;
+  var yMin = Math.floor(lo - 2), yMax = Math.ceil(hi + 2);
+  if (yMax - yMin < 4) yMax = yMin + 4;
+  var xOf = function (hv) { return L + iw * ((hv - H0) / (H1 - H0)); };
+  var yOf = function (v) { return T + ih * (1 - (v - yMin) / (yMax - yMin)); };
+  var yOfPct = function (p) { return T + ih * (1 - Math.max(0, Math.min(100, p)) / 100); };
+  var hasRain = pts.some(function (x) { return x.p !== null && x.p !== undefined; });
+
+  var s = '';
+
+  /* 横向网格 + 温度刻度 */
+  for (var k = 0; k <= 4; k++) {
+    var vv = yMin + (yMax - yMin) * k / 4;
+    var yy = Math.round(yOf(vv)) + 0.5;
+    s += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '" stroke="#E3E1D5" stroke-width="1"/>'
+      + '<text x="' + (L - 5) + '" y="' + (yy + 3.5) + '" text-anchor="end" fill="#6C7382" font-size="10"'
+      + ' font-family="ui-monospace,Consolas,monospace">' + Math.round(vv) + '°</text>';
+  }
+
+  /* 右侧降水概率刻度 */
+  if (hasRain) {
+    for (var pk = 0; pk <= 2; pk++) {
+      var pp = 100 - pk * 50;
+      var py = Math.round(yOfPct(pp)) + 0.5;
+      s += '<text x="' + (W - 4) + '" y="' + (py + 3.5) + '" text-anchor="end" fill="#6E8CA8" font-size="10"'
+        + ' font-family="ui-monospace,Consolas,monospace">' + pp + '%</text>';
+    }
+  }
+
+  /* 时间刻度 */
+  var stepX = narrow ? 4 : 2;
+  for (var tx = H0; tx <= H1; tx += stepX) {
+    var anchor = tx === H0 ? 'start' : (tx >= H1 - 1 ? 'end' : 'middle');
+    s += '<text x="' + Math.round(xOf(tx)) + '" y="' + (H - 7) + '" text-anchor="' + anchor + '" fill="#6C7382"'
+      + ' font-size="' + (narrow ? 9 : 10) + '" font-family="ui-monospace,Consolas,monospace">' + pad(tx) + ':00</text>';
+  }
+
+  /* 体感：面积 + 实线 */
+  var fPath = '', firstX = null, lastX = null;
+  for (var a = 0; a < pts.length; a++) {
+    if (pts[a].f === null || pts[a].f === undefined) continue;
+    var px = Math.round(xOf(pts[a].h)), py = Math.round(yOf(pts[a].f));
+    if (firstX === null) { firstX = px; fPath = 'M' + px + ' ' + py; }
+    else { fPath += ' L' + px + ' ' + py; }
+    lastX = px;
+  }
+  if (firstX === null) { wrap.innerHTML = ''; return; }
+  s += '<path d="M' + firstX + ' ' + (T + ih) + ' L' + fPath.slice(1) + ' L' + lastX + ' ' + (T + ih) + ' Z" fill="#2B4568" fill-opacity="0.07" stroke="none"/>';
+  s += '<path d="' + fPath + '" fill="none" stroke="#2B4568" stroke-width="2" stroke-linejoin="round"/>';
+
+  /* 气温：虚线 */
+  var tPath = '';
+  for (var b = 0; b < pts.length; b++) {
+    if (pts[b].t === null || pts[b].t === undefined) continue;
+    tPath += (tPath ? ' L' : 'M') + Math.round(xOf(pts[b].h)) + ' ' + Math.round(yOf(pts[b].t));
+  }
+  if (tPath) s += '<path d="' + tPath + '" fill="none" stroke="#98A0AC" stroke-width="1.2" stroke-dasharray="4 3"/>';
+
+  /* 降水概率：钢蓝细线 */
+  if (hasRain) {
+    var pPath = '';
+    for (var q = 0; q < pts.length; q++) {
+      if (pts[q].p === null || pts[q].p === undefined) continue;
+      pPath += (pPath ? ' L' : 'M') + Math.round(xOf(pts[q].h)) + ' ' + Math.round(yOfPct(pts[q].p));
+    }
+    if (pPath) s += '<path d="' + pPath + '" fill="none" stroke="#6E8CA8" stroke-width="1.3" stroke-opacity="0.9" stroke-linejoin="round"/>';
+  }
+
+  /* 底轴 */
+  s += '<line x1="' + L + '" y1="' + (T + ih) + '" x2="' + (W - R) + '" y2="' + (T + ih) + '" stroke="#CFCDBF" stroke-width="1"/>';
+
+  /* 出门 / 下班竖线 */
+  var marks = [];
+  if (go.t >= H0 && go.t <= H1) marks.push({ x: xOf(go.t), txt: '出门 ' + state.go, v: go.feels, row: 0 });
+  if (off.t >= H0 && off.t <= H1) marks.push({ x: xOf(off.t), txt: '下班 ' + state.off, v: off.feels, row: 0 });
+  if (marks.length === 2 && Math.abs(marks[0].x - marks[1].x) < 96) marks[1].row = 1;
+  for (var m = 0; m < marks.length; m++) {
+    var mk = marks[m];
+    s += '<line x1="' + Math.round(mk.x) + '" y1="' + (T - 4) + '" x2="' + Math.round(mk.x) + '" y2="' + (T + ih)
+      + '" stroke="#A8442A" stroke-width="1" stroke-dasharray="5 4" stroke-opacity="0.8"/>';
+    var lAnchor = mk.x < L + 46 ? 'start' : (mk.x > W - R - 46 ? 'end' : 'middle');
+    var ly = mk.row === 0 ? T - 26 : T - 10;
+    s += '<text x="' + Math.round(mk.x) + '" y="' + ly + '" text-anchor="' + lAnchor + '" fill="#A8442A"'
+      + ' font-size="10.5" font-family="inherit">' + mk.txt + '</text>';
+    if (mk.v !== null && mk.v !== undefined) {
+      s += '<circle cx="' + Math.round(mk.x) + '" cy="' + Math.round(yOf(mk.v)) + '" r="3.2" fill="#EDECE4"'
+        + ' stroke="#A8442A" stroke-width="1.4"/>';
+    }
+  }
+
+  wrap.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 ' + W + ' ' + H + '" role="img"'
+    + ' aria-label="当天体感温度变化曲线">' + s + '</svg>';
+
+  chartGeom = { L: L, R: R, W: W, H: H, H0: H0, H1: H1, iw: iw, pts: pts, xOf: xOf, T: T, ih: ih };
+}
+
+/* 指到曲线上读某一小时的数值 */
+function bindChartHover() {
+  var wrap = $('chart'), tip = $('ctip');
+  if (!wrap || !tip) return;
+
+  function move(e) {
+    if (!chartGeom) return;
+    var box = wrap.getBoundingClientRect();
+    var frac = (e.clientX - box.left - chartGeom.L) / chartGeom.iw;
+    var hv = Math.round(chartGeom.H0 + frac * (chartGeom.H1 - chartGeom.H0));
+    hv = Math.max(chartGeom.H0, Math.min(chartGeom.H1, hv));
+    var p = null;
+    for (var i = 0; i < chartGeom.pts.length; i++) if (chartGeom.pts[i].h === hv) p = chartGeom.pts[i];
+    if (!p || p.f === null || p.f === undefined) { tip.removeAttribute('data-on'); return; }
+    tip.setAttribute('data-on', '1');
+    tip.innerHTML = '<b>' + pad(hv) + ':00</b>体感 ' + Math.round(p.f) + '°'
+      + (p.t === null || p.t === undefined ? '' : '／气温 ' + Math.round(p.t) + '°')
+      + (p.p === null || p.p === undefined ? '' : '／降水 ' + Math.round(p.p) + '%');
+    var tx = chartGeom.xOf(hv);
+    tip.style.left = Math.max(58, Math.min(chartGeom.W - 58, tx)) + 'px';
+  }
+
+  wrap.addEventListener('pointermove', move);
+  wrap.addEventListener('pointerdown', move);
+  wrap.addEventListener('pointerleave', function () { tip.removeAttribute('data-on'); });
+}
+
+window.addEventListener('resize', function () {
+  clearTimeout(chartTimer);
+  chartTimer = setTimeout(function () {
+    if (lastData && lastCtx) drawChart(lastData, lastCtx.go, lastCtx.off);
+  }, 150);
+});
+
+/* ============================================================
+   9. 城市面板
+   ============================================================ */
+var cityOpen = false;
+
+function renderCityList(filter) {
+  var f = (filter || '').trim();
+  var list = CITIES.filter(function (c) { return !f || c[0].indexOf(f) >= 0 || c[3].indexOf(f) >= 0; });
+  if (!list.length) {
+    $('cityList').innerHTML = '<div class="city-hint">没找到「' + f + '」，换个写法试试，或直接用现在所在的城市。</div>';
+    return;
+  }
+  $('cityList').innerHTML = list.map(function (c) {
+    return '<button type="button" class="city-item" data-city="' + c[0] + '" data-active="' + (c[0] === state.city ? 1 : 0) + '">' + c[0] + '</button>';
+  }).join('');
+  var btns = $('cityList').querySelectorAll('.city-item');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].addEventListener('click', function () {
+      setCity(this.getAttribute('data-city'));
+    });
+  }
+}
+
+function toggleCity(force) {
+  cityOpen = force === undefined ? !cityOpen : force;
+  $('cityPanel').setAttribute('data-open', cityOpen ? '1' : '0');
+  $('btnCity').setAttribute('aria-expanded', cityOpen ? 'true' : 'false');
+  if (cityOpen) {
+    renderCityList('');
+    setTimeout(function () { try { $('citySearch').focus(); } catch (e) {} }, 60);
+  }
+}
+
+function setCity(name) {
+  state.city = name;
+  $('cityName').textContent = name;
+  saveState();
+  toggleCity(false);
+  renderCityList('');
+  refresh();
+}
+
+/* 用当前位置：file:// 或非 https 时浏览器会直接拒绝，这里给出明确提示 */
+function useGeo() {
+  if (!navigator.geolocation) { setStatus('这台设备/当前打开方式不支持定位。直接在列表里选城市即可。', false); return; }
+  setStatus('正在定位…', false);
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    var la = pos.coords.latitude, lo = pos.coords.longitude;
+    var best = CITIES[0], bd = 1e9;
+    for (var i = 0; i < CITIES.length; i++) {
+      var d = haversine(la, lo, CITIES[i][1], CITIES[i][2]);
+      if (d < bd) { bd = d; best = CITIES[i]; }
+    }
+    setStatus('', false);
+    setCity(best[0]);
+    setStatus('已定位到你附近的城市：' + best[0] + '（距最近内置城市约 ' + Math.round(bd) + ' 公里）。', false);
+  }, function (err) {
+    var tip = '定位没成功';
+    if (err && err.code === 1) tip = '定位权限被拒绝';
+    else if (err && err.code === 2) tip = '拿不到位置信号';
+    setStatus('<b>' + tip + '</b>。用 file:// 直接打开或用 http 访问时，手机浏览器会禁止定位；把文件放到 https 页面或直接用列表选城市都可以。', true);
+  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 });
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  var R = 6371, toRad = Math.PI / 180;
+  var dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+    + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/* ============================================================
+   10. 主流程
+   ============================================================ */
+var loading = false;
+
+function refresh() {
+  if (loading) return;
+  loading = true;
+  var c = cityByName(state.city);
+  $('btnRefresh').disabled = true;
+  $('updLabel').textContent = '正在取数…';
+
+  if (window.__MOCK__) { render(window.__MOCK__); loading = false; $('btnRefresh').disabled = false; return; }
+
+  fetchWeather(c[1], c[2]).then(function (d) {
+    setStatus('', false);
+    render(d);
+    loading = false;
+    $('btnRefresh').disabled = false;
+  }).catch(function (err) {
+    loading = false;
+    $('btnRefresh').disabled = false;
+    $('updLabel').textContent = '取数失败';
+    $('tempVal').innerHTML = '—';
+    $('wxDesc').textContent = '没取到天气';
+    $('wxNote').textContent = '检查网络后点「重试」';
+    $('feelsVal').textContent = '—';
+    $('hiVal').textContent = '—';
+    $('loVal').textContent = '—';
+    $('popVal').textContent = '—';
+    $('windVal').textContent = '—';
+    setStatus('<b>没取到 ' + state.city + ' 的天气。</b>主源 Open-Meteo 和备用源 wttr.in 都没连上（' + (err && err.message ? err.message : '未知错误') + '）。'
+      + '换个网络、连上 Wi-Fi 再刷新一次；也可以在列表里换一个城市试试。建议在你看到真实数据前，先不要按上面的内容穿。', true);
+  });
+}
+
+function bindUI() {
+  $('btnCity').addEventListener('click', function () { toggleCity(); });
+  $('citySearch').addEventListener('input', function () { renderCityList(this.value); });
+  $('btnGeo').addEventListener('click', useGeo);
+  $('btnRefresh').addEventListener('click', refresh);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && cityOpen) toggleCity(false);
+  });
+
+  var goT = $('goTime'), offT = $('offTime');
+  goT.value = state.go; offT.value = state.off;
+  goT.addEventListener('change', function () { if (!this.value) return; state.go = this.value; saveState(); if (lastData) render(lastData); });
+  offT.addEventListener('change', function () { if (!this.value) return; state.off = this.value; saveState(); if (lastData) render(lastData); });
+
+  var durIn = $('durMin');
+  durIn.value = clampMin(state.min);
+  durIn.addEventListener('input', function () {
+    var v = parseInt(this.value, 10);
+    if (isNaN(v)) return;
+    state.min = Math.max(1, Math.min(180, v));
+    saveState();
+    updateArrLabel();
+    if (lastData) render(lastData);
+  });
+  durIn.addEventListener('blur', function () { this.value = clampMin(state.min); });
+  updateArrLabel();
+
+  var modeBtns = $('modeRow').querySelectorAll('button');
+  function paintMode() {
+    for (var i = 0; i < modeBtns.length; i++) {
+      modeBtns[i].setAttribute('data-on', modeBtns[i].getAttribute('data-mode') === state.mode ? '1' : '0');
+    }
+  }
+  for (var i = 0; i < modeBtns.length; i++) {
+    modeBtns[i].addEventListener('click', function () {
+      state.mode = this.getAttribute('data-mode');
+      saveState(); paintMode();
+      if (lastData) render(lastData);
+    });
+  }
+  paintMode();
+
+  $('cityName').textContent = state.city;
+  renderCityList('');
+  bindChartHover();
+
+  var td = new Date();
+  $('todayLabel').textContent = (td.getMonth() + 1) + '月' + td.getDate() + '日 '
+    + ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][td.getDay()];
+}
+
+bindUI();
+refresh();
+})();
+</script>
+</body>
+</html>
